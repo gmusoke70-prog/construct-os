@@ -89,7 +89,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where:  { email },
-      select: { id: true, name: true, email: true, role: true, companyId: true, passwordHash: true, isActive: true, avatar: true },
+      select: { id: true, name: true, email: true, role: true, companyId: true, passwordHash: true, isActive: true, avatarUrl: true },
     });
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -113,7 +113,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where:  { id: req.user.id },
-      select: { id: true, name: true, email: true, role: true, companyId: true, avatar: true, isActive: true },
+      select: { id: true, name: true, email: true, role: true, companyId: true, avatarUrl: true, isActive: true },
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ user });
