@@ -52,7 +52,9 @@
     "db:push":         "cd packages/shared && npx prisma db push",
     "db:migrate":      "cd packages/shared && npx prisma migrate dev",
     "db:studio":       "cd packages/shared && npx prisma studio",
-    "db:seed":         "node packages/shared/prisma/seed.js"
+    "db:seed":         "node packages/shared/prisma/seed.js",
+    "start":           "node server.js",
+    "build":           "npx prisma generate --schema=packages/shared/prisma/schema.prisma"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
