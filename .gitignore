@@ -16,6 +16,10 @@ build/
 
 # Prisma
 packages/shared/prisma/migrations/
+packages/shared/prisma/*.db
+packages/shared/prisma/*.db-journal
+packages/shared/prisma/*.db-shm
+packages/shared/prisma/*.db-wal
 
 # Logs
 *.log
