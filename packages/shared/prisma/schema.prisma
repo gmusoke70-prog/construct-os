@@ -8,39 +8,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ================================================================
 // ENUMS
 // ================================================================
-
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  PROJECT_MANAGER
-  ARCHITECT
-  STRUCTURAL_ENGINEER
-  QUANTITY_SURVEYOR
-  PROCUREMENT
-  HR
-  FINANCE
-  CLIENT
-  FIELD_ENGINEER
-  VIEWER
-}
-
-enum ProjectStatus { PLANNING ACTIVE ON_HOLD COMPLETED CANCELLED }
-enum TaskStatus    { BACKLOG TODO IN_PROGRESS REVIEW DONE BLOCKED }
-enum Priority      { LOW MEDIUM HIGH CRITICAL }
-enum ApprovalStatus { DRAFT PENDING PENDING_APPROVAL APPROVED REJECTED CHANGES_REQUIRED }
-enum BOQItemStatus  { DRAFT SUBMITTED APPROVED REJECTED }
-enum POStatus       { DRAFT PENDING_APPROVAL APPROVED SENT RECEIVED CANCELLED }
-enum InvoiceStatus  { DRAFT SENT PARTIALLY_PAID PAID OVERDUE CANCELLED }
-enum PayrollStatus  { PENDING PROCESSED PAID }
-enum AttendanceType { PRESENT ABSENT LATE HALF_DAY LEAVE }
-enum RiskLevel      { LOW MEDIUM HIGH CRITICAL }
 
 // ================================================================
 // CORE: Tenant / Company
@@ -56,7 +30,7 @@ model Company {
   industry    String?
   plan        String   @default("PROFESSIONAL")
   isActive    Boolean  @default(true)
-  settings    Json?
+  settings    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -85,14 +59,14 @@ model User {
   phone           String?
   avatarUrl       String?
   passwordHash    String?
-  role            UserRole  @default(VIEWER)
+  role            String  @default("VIEWER")
   isActive        Boolean   @default(true)
   inviteToken     String?   @unique
   inviteExpiry    DateTime?
   lastLoginAt     DateTime?
   deactivatedAt   DateTime?
   deactivatedBy   String?
-  preferences     Json?
+  preferences     String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -121,9 +95,9 @@ model Project {
   companyId       String
   name            String
   slug            String
-  description     String?       @db.Text
-  status          ProjectStatus @default(PLANNING)
-  priority        Priority      @default(MEDIUM)
+  description     String?      
+  status          String @default("PLANNING")
+  priority        String      @default("MEDIUM")
   location        String?
   latitude        Float?
   longitude       Float?
@@ -167,7 +141,7 @@ model ProjectMember {
   id          String   @id @default(cuid())
   projectId   String
   userId      String
-  role        UserRole
+  role        String
   isLead      Boolean  @default(false)
   joinedAt    DateTime @default(now())
 
@@ -200,7 +174,7 @@ model Phase {
   name        String
   description String?
   order       Int
-  status      TaskStatus @default(BACKLOG)
+  status      String @default("BACKLOG")
   progress    Float      @default(0)
   startDate   DateTime?
   endDate     DateTime?
@@ -218,9 +192,9 @@ model Task {
   phaseId      String?
   parentId     String?
   title        String
-  description  String?    @db.Text
-  status       TaskStatus @default(TODO)
-  priority     Priority   @default(MEDIUM)
+  description  String?   
+  status       String @default("TODO")
+  priority     String   @default("MEDIUM")
   assigneeId   String?
   dueDate      DateTime?
   completedAt  DateTime?
@@ -228,7 +202,7 @@ model Task {
   position     Int?
   estimatedHrs Float?
   actualHrs    Float?
-  tags         String[]
+  tags         String @default("")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -254,7 +228,7 @@ model BOQVersion {
   versionNo   Int            @default(1)
   name        String
   description String?
-  status          ApprovalStatus @default(DRAFT)
+  status          String @default("DRAFT")
   totalAmount     Float          @default(0)
   isLocked        Boolean        @default(false)
   calculatedAt    DateTime?
@@ -307,7 +281,7 @@ model BOQItem {
   rowIndex      Int
   code          String?
   description   String
-  specification String?       @db.Text
+  specification String?      
   unit          String
   quantity      Float         @default(0)
   wastagePercent Float        @default(0)
@@ -322,12 +296,12 @@ model BOQItem {
   totalCost     Float         @default(0)
   formulaQty    String?
   formulaRate   String?
-  status        BOQItemStatus @default(DRAFT)
+  status        String @default("DRAFT")
   notes         String?
   costLibRef    String?
   takeoffRef    String?
-  tags          String[]
-  metadata      Json?
+  tags          String @default("")
+  metadata      String?
 
   stage BOQStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
@@ -365,7 +339,7 @@ model TakeoffMeasurement {
   page         Int     @default(1)
   type         String  // LINEAR, AREA, COUNT, VOLUME
   label        String
-  points       Json
+  points       String
   value        Float
   unit         String
   scale        Float
@@ -388,7 +362,7 @@ model CostLibraryItem {
   companyId   String
   code        String
   name        String
-  description String? @db.Text
+  description String?
   category    String
   unit        String
   baseRate    Float
@@ -452,8 +426,8 @@ model FloorPlan {
   buildArea    Float?
   floors       Int      @default(1)
   style        String?
-  jsonData     Json?    // room layout data
-  svgData      String?  @db.Text
+  jsonData     String?    // room layout data
+  svgData      String? 
   generatedAt  DateTime?
   generatedBy  String?
   isApproved   Boolean  @default(false)
@@ -496,11 +470,11 @@ model StructuralModel {
   companyId   String
   name        String
   type        String   @default("FRAME")
-  nodes       Json
-  members     Json     // elements / beam-column definitions
-  loads       Json
-  constraints Json?
-  results     Json?
+  nodes       String
+  members     String     // elements / beam-column definitions
+  loads       String
+  constraints String?
+  results     String?
   status      String   @default("PENDING")
   lastAnalyzedAt DateTime?
   createdAt   DateTime @default(now())
@@ -517,8 +491,8 @@ model SimulationResult {
   id           String   @id @default(cuid())
   modelId      String
   companyId    String
-  inputData    Json
-  outputData   Json
+  inputData    String
+  outputData   String
   status       String   @default("PASS")
   safetyFactor Float?
   ucr          Float?
@@ -544,12 +518,12 @@ model Supplier {
   phone       String?
   address     String?
   country     String   @default("UG")
-  categories  String[]
+  categories  String @default("")
   rating      Float    @default(0)
   isApproved  Boolean  @default(false)
   taxId       String?
-  bankDetails Json?
-  notes       String?  @db.Text
+  bankDetails String?
+  notes       String? 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -568,7 +542,7 @@ model PurchaseOrder {
   supplierId      String?
   poNumber        String   @unique
   title           String   @default("Purchase Order")
-  status          POStatus @default(DRAFT)
+  status          String @default("DRAFT")
   currency        String   @default("UGX")
   subtotal        Float    @default(0)
   tax             Float    @default(0)
@@ -576,7 +550,7 @@ model PurchaseOrder {
   deliveryDate    DateTime?
   deliveryAddress String?
   paymentTerms    String?
-  notes           String?  @db.Text
+  notes           String? 
   approvedBy      String?
   approvedAt      DateTime?
   createdAt       DateTime @default(now())
@@ -612,7 +586,7 @@ model Quotation {
   projectId  String?
   companyId  String?
   reference  String?
-  items      Json
+  items      String
   total      Float
   validUntil DateTime?
   status     String    @default("PENDING")
@@ -670,7 +644,7 @@ model Employee {
   taxId          String?
   status         String    @default("ACTIVE")
   isActive       Boolean   @default(true)
-  documents      Json?
+  documents      String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -688,8 +662,8 @@ model Attendance {
   id          String         @id @default(cuid())
   employeeId  String
   userId      String?
-  date        DateTime       @db.Date
-  type        AttendanceType @default(PRESENT)
+  date        DateTime      
+  type        String @default("PRESENT")
   checkIn     DateTime?
   checkOut    DateTime?
   hoursWorked Float          @default(8)
@@ -711,10 +685,10 @@ model Timesheet {
   employeeId      String
   userId          String?
   projectId       String?
-  weekStart       DateTime  @db.Date
-  weekEnd         DateTime? @db.Date
-  entries         Json?
-  dailyEntries    Json?
+  weekStart       DateTime 
+  weekEnd         DateTime?
+  entries         String?
+  dailyEntries    String?
   regularHours    Float     @default(0)
   overtimeHours   Float     @default(0)
   totalHours      Float     @default(0)
@@ -735,10 +709,10 @@ model LeaveRequest {
   id         String   @id @default(cuid())
   employeeId String
   type       String   @default("ANNUAL")
-  startDate  DateTime @db.Date
-  endDate    DateTime @db.Date
+  startDate  DateTime
+  endDate    DateTime
   days       Float
-  reason     String?  @db.Text
+  reason     String? 
   status     String   @default("PENDING")
   approvedBy String?
   createdAt  DateTime @default(now())
@@ -760,7 +734,7 @@ model PayrollRecord {
   overtimeHours   Float    @default(0)
   basePay         Float    @default(0)
   overtimePay     Float    @default(0)
-  allowances      Json     @default("{}")
+  allowances      String     @default("{}")
   grossPay        Float    @default(0)
   paye            Float    @default(0)
   nssfEmployee    Float    @default(0)
@@ -801,7 +775,7 @@ model Budget {
   status      String   @default("ACTIVE")
   startDate   DateTime?
   endDate     DateTime?
-  breakdown   Json?
+  breakdown   String?
   notes       String?
   createdBy   String?
   createdAt   DateTime @default(now())
@@ -830,7 +804,7 @@ model Transaction {
   poId        String?
   date        DateTime @default(now())
   status      String   @default("COMPLETED")
-  attachments String[]
+  attachments String @default("")
   createdBy   String?
   createdAt   DateTime @default(now())
 
@@ -851,7 +825,7 @@ model Invoice {
   clientAddress String?
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
-  items         Json
+  items         String
   subtotal      Float
   taxRate       Float         @default(0.18)
   taxAmount     Float         @default(0)
@@ -859,8 +833,8 @@ model Invoice {
   amountPaid    Float         @default(0)
   balance       Float
   currency      String        @default("UGX")
-  status        InvoiceStatus @default(DRAFT)
-  notes         String?       @db.Text
+  status        String @default("DRAFT")
+  notes         String?      
   paidAt        DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -879,7 +853,7 @@ model Milestone {
   id          String    @id @default(cuid())
   projectId   String
   name        String
-  description String?   @db.Text
+  description String?  
   dueDate     DateTime?
   achieved    Boolean   @default(false)
   achievedAt  DateTime?
@@ -899,15 +873,15 @@ model Risk {
   id           String    @id @default(cuid())
   projectId    String
   title        String
-  description  String?   @db.Text
+  description  String?  
   category     String    @default("SCHEDULE")
-  level        RiskLevel @default(MEDIUM)
+  level        String @default("MEDIUM")
   probability  Float     @default(0.5)
   impact       Float     @default(0.5)
   score        Float     @default(0.25)
   status       String    @default("OPEN")
   owner        String?
-  mitigation   String?   @db.Text
+  mitigation   String?  
   dueDate      DateTime?
   raisedBy     String?
   isAiGenerated Boolean  @default(false)
@@ -937,7 +911,7 @@ model Document {
   version          Int      @default(1)
   uploadedBy       String?
   isSharedWithClient Boolean @default(false)
-  tags             String[]
+  tags             String @default("")
   createdAt        DateTime @default(now())
 
   project Project? @relation(fields: [projectId], references: [id])
@@ -952,7 +926,7 @@ model Notification {
   type      String
   title     String
   body      String
-  data      Json?
+  data      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -971,7 +945,7 @@ model AuditLog {
   action     String
   resource   String
   resourceId String?
-  changes    Json?
+  changes    String?
   ipAddress  String?
   createdAt  DateTime @default(now())
 
@@ -990,7 +964,7 @@ model SystemEvent {
   message   String
   severity  String   @default("INFO")
   userId    String?
-  metadata  Json?
+  metadata  String?
   createdAt DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id])
@@ -1025,8 +999,8 @@ model AIMessage {
   conversationId String
   companyId      String
   role           String         // user | assistant
-  content        String         @db.Text
-  metadata       Json?
+  content        String        
+  metadata       String?
   createdAt      DateTime       @default(now())
 
   conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
