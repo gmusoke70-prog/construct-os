@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "projects": [
+    {
+      "name": "construct-os-qs",
+      "rootDirectory": "portals/qs/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-pm",
+      "rootDirectory": "portals/pm/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-architect",
+      "rootDirectory": "portals/architect/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-structural",
+      "rootDirectory": "portals/structural/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-procurement",
+      "rootDirectory": "portals/procurement/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-hr",
+      "rootDirectory": "portals/hr/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-finance",
+      "rootDirectory": "portals/finance/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-admin",
+      "rootDirectory": "portals/admin/frontend",
+      "framework": "vite"
+    },
+    {
+      "name": "construct-os-client",
+      "rootDirectory": "portals/client/frontend",
+      "framework": "vite"
+    }
+  ]
+}

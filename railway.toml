@@ -1,0 +1,119 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.migrate"
+
+[[services]]
+name = "migrate"
+source = "."
+dockerfilePath = "Dockerfile.migrate"
+startCommand = "node -e \"process.exit(0)\""
+
+[[services]]
+name = "auth"
+source = "."
+dockerfilePath = "services/auth/Dockerfile"
+startCommand = "node services/auth/src/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  AUTH_PORT = "3001"
+
+[[services]]
+name = "gateway"
+source = "."
+dockerfilePath = "services/api-gateway/Dockerfile"
+startCommand = "node services/api-gateway/src/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  GATEWAY_PORT = "${{RAILWAY_PUBLIC_DOMAIN}}"
+
+[[services]]
+name = "qs"
+source = "."
+dockerfilePath = "portals/qs/Dockerfile"
+startCommand = "node portals/qs/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  QS_PORT = "3005"
+
+[[services]]
+name = "pm"
+source = "."
+dockerfilePath = "portals/pm/Dockerfile"
+startCommand = "node portals/pm/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  PM_PORT = "3006"
+
+[[services]]
+name = "architect"
+source = "."
+dockerfilePath = "portals/architect/Dockerfile"
+startCommand = "node portals/architect/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  ARCHITECT_PORT = "3007"
+
+[[services]]
+name = "structural"
+source = "."
+dockerfilePath = "portals/structural/Dockerfile"
+startCommand = "node portals/structural/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  STRUCTURAL_PORT = "3008"
+
+[[services]]
+name = "procurement"
+source = "."
+dockerfilePath = "portals/procurement/Dockerfile"
+startCommand = "node portals/procurement/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  PROCUREMENT_PORT = "3009"
+
+[[services]]
+name = "hr"
+source = "."
+dockerfilePath = "portals/hr/Dockerfile"
+startCommand = "node portals/hr/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  HR_PORT = "3010"
+
+[[services]]
+name = "finance"
+source = "."
+dockerfilePath = "portals/finance/Dockerfile"
+startCommand = "node portals/finance/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  FINANCE_PORT = "3011"
+
+[[services]]
+name = "admin"
+source = "."
+dockerfilePath = "portals/admin/Dockerfile"
+startCommand = "node portals/admin/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  ADMIN_PORT = "3012"
+
+[[services]]
+name = "client"
+source = "."
+dockerfilePath = "portals/client/Dockerfile"
+startCommand = "node portals/client/backend/index.js"
+healthcheckPath = "/health"
+
+  [services.variables]
+  CLIENT_PORT = "3013"
