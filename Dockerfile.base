@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+# ─── Construct-OS base image ───────────────────────────────────────────────────
+# Each portal's Dockerfile adds only its own source files on top.
+FROM node:20-alpine AS base
+RUN apk add --no-cache dumb-init
+WORKDIR /app
+
+# Workspace root manifest + devDependencies (concurrently, nodemon)
+COPY package.json ./
+
+# Shared package
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/shared/prisma       ./packages/shared/prisma/
+COPY packages/shared/index.js     ./packages/shared/
+COPY packages/shared/middleware   ./packages/shared/middleware/
+COPY packages/shared/services     ./packages/shared/services/
+COPY packages/shared/routes       ./packages/shared/routes/
+COPY packages/shared/components   ./packages/shared/components/
+
+# Install all workspace deps (hoisted)
+RUN npm install --omit=dev
+RUN npx prisma generate --schema=packages/shared/prisma/schema.prisma
+
+ENTRYPOINT ["dumb-init", "--"]

@@ -1,0 +1,299 @@
+version: '3.9'
+
+# ─── Construct-OS — Full local stack ──────────────────────────────────────────
+# Run:  docker compose up --build
+# Ports exposed on host:
+#   5432  PostgreSQL
+#   6379  Redis
+#   9000  MinIO API   9001  MinIO console
+#   3000  API Gateway (all traffic goes here)
+#   3005–3013  individual portals (optional direct access)
+
+services:
+
+  # ─── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB:       ${POSTGRES_DB:-constructos}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redispass}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispass}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── DB migration (run once, then exits) ──────────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ─── Auth Service ────────────────────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT:         3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:   ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── API Gateway ─────────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT:              3000
+      JWT_SECRET:        ${JWT_SECRET}
+      AUTH_SERVICE_URL:  http://auth-service:3001
+      QS_URL:            http://qs-portal:3005
+      PM_URL:            http://pm-portal:3012
+      ARCHITECT_URL:     http://architect-portal:3006
+      STRUCTURAL_URL:    http://structural-portal:3007
+      PROCUREMENT_URL:   http://procurement-portal:3008
+      HR_URL:            http://hr-portal:3009
+      FINANCE_URL:       http://finance-portal:3010
+      ADMIN_URL:         http://admin-portal:3011
+      CLIENT_URL:        http://client-portal:3013
+    depends_on:
+      - auth-service
+      - qs-portal
+      - pm-portal
+      - architect-portal
+      - structural-portal
+      - procurement-portal
+      - hr-portal
+      - finance-portal
+      - admin-portal
+      - client-portal
+
+  # ─── Portals ─────────────────────────────────────────────────────────────────
+
+  qs-portal:
+    build:
+      context: .
+      dockerfile: portals/qs/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      PORT:          3005
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT:     9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET:   construct-os
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pm-portal:
+    build:
+      context: .
+      dockerfile: portals/pm/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3012:3012"
+    environment:
+      PORT:          3012
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  architect-portal:
+    build:
+      context: .
+      dockerfile: portals/architect/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      PORT:          3006
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT:     9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET:   construct-os
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  structural-portal:
+    build:
+      context: .
+      dockerfile: portals/structural/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3007:3007"
+    environment:
+      PORT:          3007
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  procurement-portal:
+    build:
+      context: .
+      dockerfile: portals/procurement/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3008:3008"
+    environment:
+      PORT:          3008
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  hr-portal:
+    build:
+      context: .
+      dockerfile: portals/hr/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3009:3009"
+    environment:
+      PORT:          3009
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  finance-portal:
+    build:
+      context: .
+      dockerfile: portals/finance/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    environment:
+      PORT:          3010
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin-portal:
+    build:
+      context: .
+      dockerfile: portals/admin/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3011:3011"
+    environment:
+      PORT:          3011
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      APP_URL:       ${APP_URL:-http://localhost:3000}
+      SMTP_HOST:     ${SMTP_HOST:-}
+      SMTP_PORT:     ${SMTP_PORT:-587}
+      SMTP_USER:     ${SMTP_USER:-}
+      SMTP_PASS:     ${SMTP_PASS:-}
+      SMTP_FROM:     ${SMTP_FROM:-noreply@construct-os.io}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  client-portal:
+    build:
+      context: .
+      dockerfile: portals/client/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3013:3013"
+    environment:
+      PORT:          3013
+      DATABASE_URL:  postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-constructos}
+      JWT_SECRET:    ${JWT_SECRET}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT:     9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET:   construct-os
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
