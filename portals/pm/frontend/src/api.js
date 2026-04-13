@@ -1,4 +1,4 @@
-const BASE = '/api';
+const BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 const getToken  = () => localStorage.getItem('cos_token');
 export const setToken   = t => localStorage.setItem('cos_token', t);
 export const clearToken = () => localStorage.removeItem('cos_token');

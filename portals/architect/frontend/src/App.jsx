@@ -10,7 +10,7 @@ async function req(method, path, body) {
   const h = { 'Content-Type': 'application/json' };
   const t = getToken();
   if (t) h['Authorization'] = `Bearer ${t}`;
-  const r = await fetch(`/api${path}`, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(`${import.meta.env.VITE_API_URL || ""}/api${path}`, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
   if (r.status === 401) { clearToken(); window.location.href = '/login'; return; }
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Failed');
@@ -60,7 +60,7 @@ function FloorPlans() {
   }
 
   async function exportSVG(id) {
-    const res = await fetch(`/api/architect/floor-plans/${id}/export`, { headers:{ Authorization:`Bearer ${getToken()}` } });
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/architect/floor-plans/${id}/export`, { headers:{ Authorization:`Bearer ${getToken()}` } });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href=url; a.download=`floor-plan-${id}.svg`; a.click();

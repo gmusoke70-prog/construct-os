@@ -10,7 +10,7 @@ async function req(method, path, body) {
   const h = { 'Content-Type': 'application/json' };
   const t = getToken();
   if (t) h['Authorization'] = `Bearer ${t}`;
-  const r = await fetch(`/api${path}`, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(`${import.meta.env.VITE_API_URL || ""}/api${path}`, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
   if (r.status === 401) { clearToken(); window.location.href = '/login'; return; }
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Failed');

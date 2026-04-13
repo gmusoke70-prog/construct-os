@@ -32,14 +32,19 @@ app.set('trust proxy', 1);
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '*').split(',');
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error('CORS: origin not allowed'));
+    // Allow requests with no origin (mobile, Postman), localhost, and *.vercel.app
+    if (!origin) return cb(null, true);
+    if (
+      origin.includes('localhost') ||
+      origin.includes('vercel.app') ||
+      origin.includes('railway.app') ||
+      (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin))
+    ) {
+      return cb(null, true);
     }
+    cb(new Error('CORS: origin not allowed'));
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
